@@ -1,0 +1,50 @@
+apiVersion: k8s.keycloak.org/v2alpha1
+kind: Keycloak
+metadata:
+  labels:
+    app: keycloak
+  name: keycloak
+  namespace: keycloak
+spec:
+  hostname:
+    hostname: <KEYCLOAK_URL_HERE>
+  resources:
+    requests:
+      cpu: "2"
+      memory: "1250M"
+    limits:
+      cpu: "6"
+      memory: "2250M"
+  db:
+    vendor: postgres
+    url: jdbc:aws-wrapper:postgresql://<AWS_AURORA_URL_HERE>:5432/keycloak
+    poolMinSize: 30
+    poolInitialSize: 30
+    poolMaxSize: 30
+    usernameSecret:
+      name: keycloak-db-secret
+      key: username
+    passwordSecret:
+      name: keycloak-db-secret
+      key: password
+  image: <KEYCLOAK_IMAGE_HERE>
+  startOptimized: false
+  features:
+    enabled:
+      - multi-site
+  transaction:
+    xaEnabled: false
+  additionalOptions:
+    - name: http-max-queued-requests
+      value: "1000"
+    - name: log-console-output
+      value: json
+    - name: metrics-enabled
+      value: 'true'
+    - name: http-pool-max-threads
+      value: "66"
+    - name: db-driver
+      value: software.amazon.jdbc.Driver
+  http:
+    tlsSecret: keycloak-tls-secret
+  instances: 3

@@ -1,0 +1,44 @@
+# https://developer.hashicorp.com/vault/docs/platform/k8s/helm/configuration
+# https://developer.hashicorp.com/vault/tutorials/kubernetes/kubernetes-raft-deployment-guide
+fullnameOverride: vault
+global:
+  tlsDisable: true
+  serverTelemetry:
+    prometheusOperator: false # TODO enable after implementing Prometheus deployment
+server:
+  image:
+    tag: "1.16.2"
+  affinity: null # TODO disabled for testing
+  # These Resource Limits are in line with node requirements in the
+  # Vault Reference Architecture for a Small Cluster.
+  resources:
+    requests:
+      cpu: "500m"  # TODO 2000m
+      memory: "2Gi" # TODO 8Gi
+    limits:
+      cpu: "1000m" # TODO 2000m
+      memory: "8Gi"  # TODO 16Gi
+  # For HA configuration and because we need to programmatically init the vault (as opposed to auto unseal),
+  # we need to define custom readiness/liveness Probe settings.
+  readinessProbe:
+    enabled: true
+    path: "/v1/sys/health?standbyok=true&sealedcode=204&uninitcode=204"
+  livenessProbe:
+    enabled: true
+    path: "/v1/sys/health?standbyok=true"
+    initialDelaySeconds: 600
+  ha:
+    enabled: true
+    replicas: 3 # TODO change to 5
+    raft:
+      enabled: true
+      setNodeId: true
+  auditStorage:
+    enabled: false # TODO enable
+injector:
+  enabled: false # TODO decide how secrets should be made available to pods
+ui:
+  enabled: true
+  serviceType: LoadBalancer
+  serviceNodePort: null
+  externalPort: 8200

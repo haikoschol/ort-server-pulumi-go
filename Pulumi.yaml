@@ -1,0 +1,7 @@
+name: ort-server-pulumi-go
+runtime: go
+description: Production deployment of ORT Server and dependencies
+config:
+  pulumi:tags:
+    value:
+      pulumi:template: kubernetes-go
