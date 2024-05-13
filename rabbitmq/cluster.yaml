@@ -2,6 +2,6 @@ apiVersion: rabbitmq.com/v1beta1
 kind: RabbitmqCluster
 metadata:
   name: rabbitmq
-  namespace: queue
+  namespace: ort-server
 spec:
   replicas: 3

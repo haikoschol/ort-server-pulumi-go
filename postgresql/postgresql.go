@@ -3,7 +3,6 @@ package postgresql
 import (
 	"github.com/haikoschol/ort-server-pulumi-go/common"
 	pulumiv1 "github.com/pulumi/pulumi-kubernetes/sdk/v4/go/kubernetes/core/v1"
-	pulumimeta1 "github.com/pulumi/pulumi-kubernetes/sdk/v4/go/kubernetes/meta/v1"
 	"github.com/pulumi/pulumi-kubernetes/sdk/v4/go/kubernetes/yaml"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 	corev1 "k8s.io/api/core/v1"
@@ -13,42 +12,28 @@ import (
 type Cluster struct {
 	pulumi.ResourceState
 
-	namespace        *pulumiv1.Namespace
 	operatorManifest *yaml.ConfigFile
 	clusterManifest  *yaml.ConfigFile
 }
 
 type ClusterArgs struct {
+	Namespace *pulumiv1.Namespace
 }
 
 func NewCluster(
 	ctx *pulumi.Context,
 	name string,
-	_ *ClusterArgs,
+	args *ClusterArgs,
 	opts ...pulumi.ResourceOption,
 ) (*Cluster, error) {
 	component := &Cluster{}
-
+	opts = append(opts, pulumi.DependsOn([]pulumi.Resource{args.Namespace}))
 	err := ctx.RegisterComponentResource("cloudnativepg:Cluster", name, component, opts...)
 	if err != nil {
 		return nil, err
 	}
 
-	component.namespace, err = pulumiv1.NewNamespace(
-		ctx,
-		"db",
-		&pulumiv1.NamespaceArgs{
-			Metadata: &pulumimeta1.ObjectMetaArgs{
-				Name: pulumi.String("db"),
-			},
-		},
-		pulumi.ResourceOption(pulumi.Parent(component)),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	component.operatorManifest, err = yaml.NewConfigFile(ctx, "cnpgoperator",
+	component.operatorManifest, err = yaml.NewConfigFile(ctx, "cnpg-operator",
 		&yaml.ConfigFileArgs{
 			File: "./postgresql/cnpg-1.23.1.yaml",
 		},

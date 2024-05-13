@@ -11,11 +11,13 @@ metadata:
     app.kubernetes.io/version: 24.0.4
     app.kubernetes.io/managed-by: quarkus
   name: keycloak-operator
+  namespace: ort-server
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: keycloak-operator-clusterrole
+  namespace: ort-server
 rules:
   - apiGroups:
       - config.openshift.io
@@ -28,6 +30,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: keycloakrealmimportcontroller-cluster-role
+  namespace: ort-server
 rules:
   - apiGroups:
       - k8s.keycloak.org
@@ -60,6 +63,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: keycloakcontroller-cluster-role
+  namespace: ort-server
 rules:
   - apiGroups:
       - k8s.keycloak.org
@@ -141,6 +145,7 @@ metadata:
   labels:
     app.kubernetes.io/name: keycloak-operator
   name: keycloak-operator-clusterrole-binding
+  namespace: ort-server
 roleRef:
   kind: ClusterRole
   apiGroup: rbac.authorization.k8s.io
@@ -154,6 +159,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: keycloak-operator-role
+  namespace: ort-server
 rules:
   - apiGroups:
       - apps
@@ -225,6 +231,7 @@ metadata:
   labels:
     app.kubernetes.io/name: keycloak-operator
   name: keycloak-operator-role-binding
+  namespace: ort-server
 roleRef:
   kind: Role
   apiGroup: rbac.authorization.k8s.io
@@ -237,6 +244,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: keycloakrealmimportcontroller-role-binding
+  namespace: ort-server
 roleRef:
   kind: ClusterRole
   apiGroup: rbac.authorization.k8s.io
@@ -249,6 +257,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: keycloakcontroller-role-binding
+  namespace: ort-server
 roleRef:
   kind: ClusterRole
   apiGroup: rbac.authorization.k8s.io
@@ -264,6 +273,7 @@ metadata:
     app.kubernetes.io/name: keycloak-operator
     app.kubernetes.io/version: 24.0.4
   name: keycloak-operator-view
+  namespace: ort-server
 roleRef:
   kind: ClusterRole
   apiGroup: rbac.authorization.k8s.io
@@ -284,6 +294,7 @@ metadata:
     app.kubernetes.io/version: 24.0.4
     app.kubernetes.io/managed-by: quarkus
   name: keycloak-operator
+  namespace: ort-server
 spec:
   ports:
     - name: http
@@ -306,6 +317,7 @@ metadata:
     app.kubernetes.io/version: 24.0.4
     app.kubernetes.io/managed-by: quarkus
   name: keycloak-operator
+  namespace: ort-server
 spec:
   replicas: 1
   selector:
