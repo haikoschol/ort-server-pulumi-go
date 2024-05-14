@@ -2,7 +2,9 @@ package main
 
 import (
 	"github.com/haikoschol/ort-server-pulumi-go/keycloak"
+	ortserver "github.com/haikoschol/ort-server-pulumi-go/ort-server"
 	"github.com/haikoschol/ort-server-pulumi-go/postgresql"
+	"github.com/haikoschol/ort-server-pulumi-go/rabbitmq"
 	"github.com/haikoschol/ort-server-pulumi-go/vault"
 	pulumiv1 "github.com/pulumi/pulumi-kubernetes/sdk/v4/go/kubernetes/core/v1"
 	pulumimeta1 "github.com/pulumi/pulumi-kubernetes/sdk/v4/go/kubernetes/meta/v1"
@@ -39,10 +41,15 @@ func main() {
 			return err
 		}
 
-		//_, err = rabbitmq.NewCluster(ctx, "rabbitmq-cluster", &rabbitmq.ClusterArgs{Namespace: namespace})
-		//if err != nil {
-		//	return err
-		//}
+		_, err = rabbitmq.NewCluster(ctx, "rabbitmq-cluster", &rabbitmq.ClusterArgs{Namespace: namespace})
+		if err != nil {
+			return err
+		}
+
+		_, err = ortserver.NewORTServer(ctx, "ort-server", &ortserver.Args{Namespace: namespace})
+		if err != nil {
+			return err
+		}
 
 		return nil
 	})

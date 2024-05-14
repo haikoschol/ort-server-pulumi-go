@@ -18,15 +18,15 @@ spec:
       memory: "2Gi"
   db:
     vendor: postgres
-    url: "jdbc:postgresql://postgresql-rw:5432/app" # FIXME hard-coded dbname
+    url: "jdbc:postgresql://postgresql-rw:5432/app" # FIXME db name should be "keycloak"
     poolMinSize: 5
     poolInitialSize: 5
     poolMaxSize: 30
     usernameSecret:
-      name: postgresql-app
+      name: postgresql-app # TODO change to postgresql-keycloak
       key: username
     passwordSecret:
-      name: postgresql-app
+      name: postgresql-app # TODO change to postgresql-keycloak
       key: password
   http:
     tlsSecret: keycloak-tls

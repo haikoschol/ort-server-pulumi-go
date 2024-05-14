@@ -1,7 +1,6 @@
 package vault
 
 import (
-	"fmt"
 	pulumiv1 "github.com/pulumi/pulumi-kubernetes/sdk/v4/go/kubernetes/core/v1"
 	"github.com/pulumi/pulumi-kubernetes/sdk/v4/go/kubernetes/helm/v3"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
@@ -59,21 +58,10 @@ func NewCluster(ctx *pulumi.Context, name string, args *ClusterArgs, opts ...pul
 		return nil, err
 	}
 
-	component.unsealer, err = newUnsealer(
-		ctx,
-		"vault-unsealer",
-		pulumi.Parent(component.release),
-	)
+	component.unsealer, err = newUnsealer(ctx, "vault-unsealer", pulumi.Parent(component.release))
 	if err != nil {
 		return nil, err
 	}
 
-	outputs := make(pulumi.Map)
-	for i, key := range component.unsealer.unsealKeys {
-		outputs[fmt.Sprintf("vault-unseal-key-%d", i+1)] = pulumi.ToSecret(key)
-	}
-
-	outputs["vault-initial-root-key"] = pulumi.ToSecret(component.unsealer.rootToken)
-	err = ctx.RegisterResourceOutputs(component, outputs)
 	return component, err
 }

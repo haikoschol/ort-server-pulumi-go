@@ -1,0 +1,114 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: orchestrator
+  namespace: ort-server
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: job-creator
+  namespace: ort-server
+rules:
+  - apiGroups: ["batch", "extensions"]
+    resources: ["jobs"]
+    verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: job-creator
+  namespace: ort-server
+subjects:
+  - kind: ServiceAccount
+    name: orchestrator
+    namespace: ort-server
+roleRef:
+  kind: Role
+  name: job-creator
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: ort-server-orchestrator
+  name: ort-server-orchestrator
+  namespace: ort-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ort-server-orchestrator
+  template:
+    metadata:
+      labels:
+        app: ort-server-orchestrator
+    spec:
+      serviceAccountName: orchestrator
+      containers:
+        - env:
+            - name: DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-app
+                  key: host
+            - name: DB_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-app
+                  key: port
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-app
+                  key: dbname
+            - name: DB_SCHEMA
+              value: public
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-app
+                  key: username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-app
+                  key: password
+            - name: DB_SSL_MODE
+              value: require
+            - name: ORCHESTRATOR_SENDER_TRANSPORT_TYPE
+              value: "rabbitMQ"
+            - name: ORCHESTRATOR_SENDER_TRANSPORT_SERVER_URI
+              value: "amqp://rabbitmq:5672"
+            - name: ORCHESTRATOR_SENDER_TRANSPORT_QUEUE_NAME
+              value: orchestrator_queue
+            - name: ORCHESTRATOR_SENDER_TRANSPORT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-default-user
+                  key: username
+            - name: ORCHESTRATOR_SENDER_TRANSPORT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-default-user
+                  key: password
+            - name: ORCHESTRATOR_RECEIVER_TRANSPORT_TYPE
+              value: "rabbitMQ"
+            - name: ORCHESTRATOR_RECEIVER_TRANSPORT_SERVER_URI
+              value: "amqp://rabbitmq:5672"
+            - name: ORCHESTRATOR_RECEIVER_TRANSPORT_QUEUE_NAME
+              value: orchestrator_queue
+            - name: ORCHESTRATOR_RECEIVER_TRANSPORT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-default-user
+                  key: username
+            - name: ORCHESTRATOR_RECEIVER_TRANSPORT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-default-user
+                  key: password
+          image: "ghcr.io/eclipse-apoapsis/ort-server-orchestrator:sha-523cacc"
+          name: orchestrator
+      restartPolicy: Always

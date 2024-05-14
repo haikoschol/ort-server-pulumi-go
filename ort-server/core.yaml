@@ -1,0 +1,100 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: ort-server-core
+  name: ort-server-core
+  namespace: ort-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ort-server-core
+  template:
+    metadata:
+      labels:
+        app: ort-server-core
+    spec:
+      containers:
+        - env:
+            - name: DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-app
+                  key: host
+            - name: DB_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-app
+                  key: port
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-app
+                  key: dbname
+            - name: DB_SCHEMA
+              value: public
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-app
+                  key: username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-app
+                  key: password
+            - name: DB_SSL_MODE
+              value: require
+            - name: JWT_URI
+              value: https://keycloak-service:8443/realms/master/protocol/openid-connect/certs
+            - name: JWT_ISSUER
+              value: https://keycloak-service:8443/realms/master
+            - name: PORT
+              value: "8080"
+            - name: ORCHESTRATOR_SENDER_TRANSPORT_TYPE
+              value: "rabbitMQ"
+            - name: ORCHESTRATOR_SENDER_TRANSPORT_SERVER_URI
+              value: "amqp://rabbitmq:5672"
+            - name: ORCHESTRATOR_SENDER_TRANSPORT_QUEUE_NAME
+              value: orchestrator_queue
+            - name: ORCHESTRATOR_SENDER_TRANSPORT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-default-user
+                  key: username
+            - name: ORCHESTRATOR_SENDER_TRANSPORT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-default-user
+                  key: password
+          image: "ghcr.io/eclipse-apoapsis/ort-server-core:sha-523cacc"
+          livenessProbe:
+            failureThreshold: 6
+            httpGet:
+              path: /api/v1/liveness
+              port: 8080
+              scheme: HTTP
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          name: ort-server
+          ports:
+            - containerPort: 8080
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: ort-server-core
+  name: ort-server-core
+  namespace: ort-server
+spec:
+  type: LoadBalancer
+  ports:
+    - name: "8080"
+      port: 8080
+      targetPort: 8080
+  selector:
+    app: ort-server-core

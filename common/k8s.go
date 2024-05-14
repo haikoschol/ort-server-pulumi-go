@@ -135,6 +135,51 @@ func (kc *KubernetesClient) PodExec(pod *corev1.Pod, command string) (string, er
 	return stdout.String(), nil
 }
 
+func (kc *KubernetesClient) PodExecIgnoreExitCode(pod *corev1.Pod, command string) (string, error) {
+	cmd := []string{
+		"/bin/sh",
+		"-c",
+		command,
+	}
+
+	req := kc.clientset.CoreV1().RESTClient().
+		Post().
+		Resource("pods").
+		Name(pod.Name).
+		Namespace(kc.namespace).
+		SubResource("exec").
+		VersionedParams(&corev1.PodExecOptions{
+			Command: cmd,
+			Stdin:   false,
+			Stdout:  true,
+			Stderr:  true,
+			TTY:     false,
+		}, scheme.ParameterCodec)
+
+	exc, err := remotecommand.NewSPDYExecutor(kc.config, "POST", req.URL())
+	if err != nil {
+		return "", err
+	}
+
+	var stdout, stderr bytes.Buffer
+
+	_ = exc.StreamWithContext(
+		context.Background(),
+		remotecommand.StreamOptions{
+			Stdin:  nil,
+			Stdout: &stdout,
+			Stderr: &stderr,
+			Tty:    false,
+		})
+
+	errOutput := stderr.String()
+	if errOutput != "" {
+		return "", fmt.Errorf(`PodExec("%s", "%s") stderr: %s`, pod.Name, cmd, errOutput)
+	}
+
+	return stdout.String(), nil
+}
+
 func (kc *KubernetesClient) GetPod(name string) (*corev1.Pod, error) {
 	return kc.clientset.CoreV1().Pods(kc.namespace).Get(context.Background(), name, metav1.GetOptions{})
 }

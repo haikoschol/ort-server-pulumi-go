@@ -23,37 +23,91 @@ func newUnsealer(ctx *pulumi.Context, name string, opts ...pulumi.ResourceOption
 		return nil, err
 	}
 
-	if !ctx.DryRun() {
-		client, err := common.NewKubernetesClient("ort-server")
-		if err != nil {
-			return nil, err
-		}
-
-		var pods []corev1.Pod
-		podLabel := "app.kubernetes.io/name=vault"
-		deadline := time.Now().Add(time.Minute * 2)
-
-		for time.Now().Before(deadline) {
-			pods, err = client.GetPodsWithLabel(podLabel)
-			if err != nil {
-				return nil, err
-			}
-			if len(pods) > 0 {
-				break
-			}
-			time.Sleep(time.Second)
-		}
-
-		initInfo, err := unseal(pods, client)
-		if err != nil {
-			return nil, err
-		}
-
-		component.unsealKeys = initInfo.UnsealKeys
-		component.rootToken = initInfo.RootToken
+	if ctx.DryRun() {
+		return component, exportExistingOutputs(ctx, component)
 	}
 
+	client, err := common.NewKubernetesClient("ort-server")
+	if err != nil {
+		return nil, err
+	}
+
+	var pods []corev1.Pod
+	podLabel := "app.kubernetes.io/name=vault"
+	deadline := time.Now().Add(time.Minute * 2)
+
+	for time.Now().Before(deadline) {
+		pods, err = client.GetPodsWithLabel(podLabel)
+		if err != nil {
+			return nil, err
+		}
+		if len(pods) > 0 {
+			break
+		}
+		time.Sleep(time.Second)
+	}
+
+	isSealed, err := isVaultSealed(&pods[0], client)
+	if err != nil {
+		return nil, err
+	}
+
+	if !isSealed {
+		return component, exportExistingOutputs(ctx, component)
+	}
+
+	initInfo, err := unseal(pods, client)
+	if err != nil {
+		return nil, err
+	}
+
+	outputs := make(pulumi.Map)
+	for i, key := range initInfo.UnsealKeys {
+		name := "vault-unseal-key-%d"
+		outputs[fmt.Sprintf(name, i+1)] = pulumi.ToSecret(key)
+	}
+
+	outputs["vault-initial-root-key"] = pulumi.ToSecret(initInfo.RootToken)
+	err = ctx.RegisterResourceOutputs(component, outputs)
+	if err != nil {
+		return nil, err
+	}
+
+	ctx.Export("vault-init-info", outputs)
+
 	return component, nil
+}
+
+func exportExistingOutputs(ctx *pulumi.Context, component *unsealer) error {
+	stackRef, err := pulumi.NewStackReference(ctx, ctx.Stack(), nil)
+	if err != nil {
+		return err
+	}
+	initInfoOutput := stackRef.GetOutput(pulumi.String("vault-init-info"))
+	ctx.Export("vault-init-info", initInfoOutput)
+	return nil
+}
+
+func isVaultSealed(pod *corev1.Pod, kc *common.KubernetesClient) (bool, error) {
+	var err error
+	pod, err = kc.WaitForPod(pod.Name, time.Minute)
+	if err != nil {
+		return false, err
+	}
+
+	output, err := kc.PodExecIgnoreExitCode(pod, "vault status -format=json")
+	if err != nil {
+		return false, err
+	}
+
+	var status map[string]interface{}
+	err = json.Unmarshal([]byte(output), &status)
+	if err != nil {
+		return false, err
+	}
+
+	sealed, ok := status["sealed"].(bool)
+	return ok && sealed, nil
 }
 
 func unseal(pods []corev1.Pod, kc *common.KubernetesClient) (iInfo InitInfo, err error) {

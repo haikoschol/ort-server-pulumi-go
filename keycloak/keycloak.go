@@ -73,14 +73,16 @@ func NewCluster(
 		return nil, err
 	}
 
-	client, err := common.NewKubernetesClient("ort-server")
-	if err != nil {
-		return nil, err
-	}
+	if !ctx.DryRun() {
+		client, err := common.NewKubernetesClient("ort-server")
+		if err != nil {
+			return nil, err
+		}
 
-	_, err = client.WaitForPods(func() ([]corev1.Pod, error) {
-		return client.GetPodsWithLabel("app.kubernetes.io/name=keycloak-operator")
-	}, time.Minute)
+		_, err = client.WaitForPods(func() ([]corev1.Pod, error) {
+			return client.GetPodsWithLabel("app.kubernetes.io/name=keycloak-operator")
+		}, time.Minute)
+	}
 
 	component.clusterManifest, err = yaml.NewConfigFile(ctx, "keycloak-cluster",
 		&yaml.ConfigFileArgs{
@@ -112,15 +114,20 @@ func createTLSSecret(ctx *pulumi.Context, component *Cluster) (*pulumiv1.Secret,
 		return nil, err
 	}
 
-	return pulumiv1.NewSecret(ctx, "keycloak-tls", &pulumiv1.SecretArgs{
-		Metadata: pulumimetav1.ObjectMetaArgs{
-			Name:      pulumi.String("keycloak-tls"),
-			Namespace: pulumi.String("ort-server"),
+	return pulumiv1.NewSecret(
+		ctx,
+		"keycloak-tls",
+		&pulumiv1.SecretArgs{
+			Metadata: pulumimetav1.ObjectMetaArgs{
+				Name:      pulumi.String("keycloak-tls"),
+				Namespace: pulumi.String("ort-server"),
+			},
+			Type: pulumi.String("kubernetes.io/tls"),
+			StringData: pulumi.StringMap{
+				"tls.crt": pulumi.String(tlsCert),
+				"tls.key": pulumi.String(tlsKey),
+			},
 		},
-		Type: pulumi.String("kubernetes.io/tls"),
-		StringData: pulumi.StringMap{
-			"tls.crt": pulumi.String(tlsCert),
-			"tls.key": pulumi.String(tlsKey),
-		},
-	}, pulumi.ResourceOption(pulumi.Parent(component)))
+		pulumi.ResourceOption(pulumi.Parent(component)),
+	)
 }

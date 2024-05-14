@@ -43,14 +43,16 @@ func NewCluster(
 		return nil, err
 	}
 
-	client, err := common.NewKubernetesClient("rabbitmq-system")
-	if err != nil {
-		return nil, err
-	}
+	if !ctx.DryRun() {
+		client, err := common.NewKubernetesClient("rabbitmq-system")
+		if err != nil {
+			return nil, err
+		}
 
-	_, err = client.WaitForPods(func() ([]corev1.Pod, error) {
-		return client.GetPodsWithLabel("app.kubernetes.io/name=rabbitmq-cluster-operator")
-	}, time.Minute)
+		_, err = client.WaitForPods(func() ([]corev1.Pod, error) {
+			return client.GetPodsWithLabel("app.kubernetes.io/name=rabbitmq-cluster-operator")
+		}, time.Minute)
+	}
 
 	component.clusterManifest, err = yaml.NewConfigFile(ctx, "rabbitmq-cluster",
 		&yaml.ConfigFileArgs{

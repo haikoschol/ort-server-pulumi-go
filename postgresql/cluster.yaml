@@ -7,3 +7,12 @@ spec:
   instances: 3
   storage:
     size: 1Gi
+# FIXME figure out how to create a database called keycloak owned by this user
+#  managed:
+#    roles:
+#      - name: keycloak
+#        ensure: present
+#        login: true
+#        superuser: false
+#        passwordSecret:
+#          name: postgresql-keycloak
